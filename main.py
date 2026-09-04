@@ -14,10 +14,11 @@ FONT_UI = ("Helvetica Neue", 11)
 FONT_UI_BOLD = ("Helvetica Neue", 13, "bold")
 FONT_COUNT = ("Helvetica Neue", 18, "bold")
 
-WORD_GLOBAL = 500
+WORD_GLOBAL = 5
 
 last_keypress_time = None
 tick_running = False
+save_enabled = False
 
 root = tk.Tk()
 root.title("Dangerous Writing App")
@@ -28,18 +29,19 @@ root.configure(bg=INK)
 def clear_text():
     text_area.delete("1.0", tk.END)
     word_count_label.config(text="0")
-    save_button.config(state="disabled")
+    save_label.config(bg=MUTED, fg=INK, cursor="arrow")
     show_placeholder()
 
 
 def update_word_count():
-    user_text = text_area.get("1.0", tk.END)
-    total_words = len(user_text.split())
-    if total_words >= WORD_GLOBAL:
-        save_button.config(state="normal")
-    else:
-        save_button.config(state="disabled")
-    word_count_label.configure(text=total_words)
+    if tick_running:
+        user_text = text_area.get("1.0", tk.END)
+        total_words = len(user_text.split())
+        if total_words >= WORD_GLOBAL:
+            save_label.config(bg=EMBER, fg=INK, cursor="plus")
+        else:
+            save_label.config(bg=MUTED, fg=INK, cursor="arrow")
+        word_count_label.configure(text=total_words)
 
 
 def reset_timer(event):
@@ -74,13 +76,9 @@ def tick():
     text_area.after(100, tick)
 
 
-def show_lost_message():
-    lost_text_label.config(text="Text lost!")
-    root.after(2500, hide_lost_message)
-
-
-def hide_lost_message():
-    lost_text_label.config(text="")
+def on_save_click(event):
+    if save_enabled:
+        save_text()
 
 
 def save_text():
@@ -95,13 +93,20 @@ def show_placeholder():
     text_area.insert("1.0", "Keep writing. Stop for five seconds and it's gone.")
     text_area.mark_set("insert", "1.0")
 
+def show_lost_message():
+    overlay = tk.Frame(root, bg=EMBER)
+    overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
+    label = tk.Label(overlay, text="Text lost", bg=EMBER, fg=PANEL, font=FONT_COUNT)
+    label.place(relx=0.5, rely=0.5, anchor="center")
+    root.after(2000, overlay.destroy)
+
 style = ttk.Style()
 style.theme_use("default")
 
 for name, color in (("ink", INK), ("ember", EMBER)):
     style.configure(
         f"{name}.Horizontal.TProgressbar",
-        troughcolor=PANEL,
+        troughcolor=INK,
         background=color,
         bordercolor=INK,
         lightcolor=color,
@@ -178,23 +183,17 @@ time_slider = tk.Scale(
 )
 time_slider.pack(side="left", padx=(10, 0))
 
-save_button = tk.Button(
+save_label = tk.Label(
     controls_row,
     text="Save",
-    state="disabled",
-    command=save_text,
     font=FONT_UI_BOLD,
     bg=MUTED,
     fg=INK,
-    activebackground=EMBER,
-    relief="flat",
-    padx=18,
+    padx=28,
     pady=6,
-    bd=0,
-    disabledforeground=INK,
-    cursor="plus",
 )
-save_button.pack(side="right")
+save_label.pack(side="right")
+save_label.bind("<Button-1>", on_save_click)
 
 show_placeholder()
 text_area.focus_force()
